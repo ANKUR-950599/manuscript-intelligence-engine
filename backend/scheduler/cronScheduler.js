@@ -1,12 +1,5 @@
-/**
- * CRON SCHEDULER
- * Runs the autonomous pipeline every 15 days.
- * Uses node-cron for reliable scheduling.
- * 
- * Schedule: Every 15 days at 2:00 AM IST
- * This ensures the pipeline runs during low-traffic hours.
- */
 const cron = require("node-cron");
+const ContentCalendar = require("../models/ContentCalendar");
 const { runAutonomousPipeline } = require("../agents/autonomousPipeline");
 
 let isRunning = false;
@@ -14,34 +7,25 @@ let lastRunAt = null;
 let lastRunResult = null;
 let schedulerStatus = "idle";
 
-/**
- * Start the autonomous scheduler.
- * Runs pipeline every 15 days at 2:00 AM.
- * 
- * Cron expression: "0 2 1,15 * *" = At 02:00 on day 1 and 15 of every month
- * This approximates a 15-day cycle.
- */
-function startScheduler() {
-  console.log("🕐 Autonomous scheduler initialized — runs on 1st and 15th of each month at 2:00 AM");
-  
-  // Schedule: 1st and 15th of every month at 2:00 AM
-  cron.schedule("0 2 1,15 * *", async () => {
-    console.log("🚀 Autonomous pipeline triggered by scheduler at", new Date().toISOString());
-    await executeAutonomousRun();
-  }, {
-    timezone: "Asia/Kolkata"
-  });
+async function startScheduler() {
+  console.log("🕐 Scheduler initialized - weekly generation on Sunday 2:00 AM IST, daily dispatch at 9:00 AM IST");
+
+  cron.schedule("0 2 * * 0", async () => {
+    console.log("🚀 Weekly pipeline triggered:", new Date().toISOString());
+    await executeAutonomousRun("weekly_content_generation");
+  }, { timezone: "Asia/Kolkata" });
+
+  cron.schedule("0 9 * * *", async () => {
+    console.log("📤 Daily content dispatch triggered:", new Date().toISOString());
+    await dispatchDailyContent();
+  }, { timezone: "Asia/Kolkata" });
 
   schedulerStatus = "active";
 }
 
-/**
- * Execute a single autonomous run.
- * Guards against concurrent runs.
- */
 async function executeAutonomousRun(runType = "autonomous") {
   if (isRunning) {
-    console.log("⚠️ Pipeline already running. Skipping.");
+    console.log("⚠ Pipeline already running. Skipping.");
     return { status: "skipped", reason: "Already running" };
   }
 
@@ -54,17 +38,15 @@ async function executeAutonomousRun(runType = "autonomous") {
       runType,
       onStepUpdate: (logEntry) => {
         console.log(`  [${logEntry.step}] ${logEntry.status}: ${logEntry.message}`);
-      }
+      },
     });
 
     lastRunAt = new Date();
     lastRunResult = result;
     schedulerStatus = "idle";
     isRunning = false;
-
-    console.log(`✅ Pipeline completed: "${result.title || 'Unknown'}" (${result.durationMs}ms)`);
+    console.log(`✅ Pipeline completed: "${result.title || "Unknown"}"`);
     return result;
-
   } catch (err) {
     console.error("❌ Autonomous pipeline failed:", err.message);
     schedulerStatus = "error";
@@ -74,9 +56,74 @@ async function executeAutonomousRun(runType = "autonomous") {
   }
 }
 
-/**
- * Get scheduler status for dashboard API.
- */
+async function dispatchDailyContent() {
+  try {
+    const now = new Date();
+    const calendar = await ContentCalendar.findOne({
+      status: "active",
+      weekStart: { $lte: now },
+      weekEnd: { $gte: now },
+    }).sort({ createdAt: -1 });
+
+    if (!calendar || !Array.isArray(calendar.weekPlan)) {
+      console.log("ℹ No active content calendar found for daily dispatch.");
+      return { status: "skipped", reason: "No active calendar" };
+    }
+
+    const day = calendar.weekPlan.find((item) => {
+      const d = new Date(item.date);
+      return d.toDateString() === now.toDateString();
+    });
+
+    if (!day) {
+      console.log("ℹ No content scheduled for today.");
+      return { status: "skipped", reason: "No content for today" };
+    }
+
+    if (day.deliveryStatus?.blog === "sent" && day.deliveryStatus?.whatsapp === "sent" && day.deliveryStatus?.email === "sent") {
+      console.log("ℹ Today's content already sent.");
+      return { status: "skipped", reason: "Already sent" };
+    }
+
+    day.deliveryStatus = day.deliveryStatus || { blog: "pending", whatsapp: "pending", email: "pending" };
+    day.deliveredAt = day.deliveredAt || { blog: null, whatsapp: null, email: null };
+
+    if (day.blog?.content && day.deliveryStatus.blog !== "sent") {
+      console.log(`📝 BLOG (${day.dayName}): ${day.blog.title}`);
+      day.deliveryStatus.blog = "sent";
+      day.deliveredAt.blog = new Date();
+    }
+
+    if (day.whatsapp?.message && day.deliveryStatus.whatsapp !== "sent") {
+      console.log(`📱 WHATSAPP (${day.dayName}): ${day.whatsapp.headline}`);
+      day.deliveryStatus.whatsapp = "sent";
+      day.deliveredAt.whatsapp = new Date();
+    }
+
+    if (day.email?.body && day.deliveryStatus.email !== "sent") {
+      console.log(`✉️ EMAIL (${day.dayName}): ${day.email.subject}`);
+      day.deliveryStatus.email = "sent";
+      day.deliveredAt.email = new Date();
+    }
+
+    await calendar.save();
+    lastRunAt = new Date();
+    lastRunResult = { status: "sent", contentCalendarId: calendar._id, day: day.dayName };
+    return lastRunResult;
+  } catch (err) {
+    console.error("❌ Daily dispatch failed:", err.message);
+    return { status: "failed", error: err.message };
+  }
+}
+
+function getNextScheduledRun() {
+  const now = new Date();
+  const nextDaily = new Date(now);
+  nextDaily.setHours(9, 0, 0, 0);
+  if (nextDaily <= now) nextDaily.setDate(nextDaily.getDate() + 1);
+  return nextDaily;
+}
+
 function getSchedulerStatus() {
   return {
     schedulerStatus,
@@ -84,25 +131,13 @@ function getSchedulerStatus() {
     lastRunAt,
     lastRunResult,
     nextScheduledRun: getNextScheduledRun(),
-    schedule: "1st and 15th of each month at 2:00 AM IST"
+    schedule: "Weekly generation on Sunday 2:00 AM IST; daily dispatch at 9:00 AM IST",
   };
 }
 
-/**
- * Calculate the next scheduled run time.
- */
-function getNextScheduledRun() {
-  const now = new Date();
-  const day = now.getDate();
-  const month = now.getMonth();
-  const year = now.getFullYear();
-
-  if (day < 15) {
-    return new Date(year, month, 15, 2, 0, 0);
-  } else {
-    // Next month, 1st
-    return new Date(year, month + 1, 1, 2, 0, 0);
-  }
-}
-
-module.exports = { startScheduler, executeAutonomousRun, getSchedulerStatus };
+module.exports = {
+  startScheduler,
+  executeAutonomousRun,
+  dispatchDailyContent,
+  getSchedulerStatus,
+};

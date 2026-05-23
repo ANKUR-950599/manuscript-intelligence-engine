@@ -1,59 +1,44 @@
 /**
- * MULTI-MODEL AI CONFIGURATION
+ * AI MODEL CONFIGURATION
  * Maps each agent to its designated AI model provider.
  * 
- * Model Assignment:
- * - Persona Agent: Gemini
- * - Research Agent: Gemini + DeepSeek R1 (via OpenRouter)
- * - Competitor Agent: DeepSeek R1 (via OpenRouter)
- * - Content Generation Agent: Groq (existing)
- * - Validation Agent: Groq (existing, lightweight)
- * - Orchestrator Agent: Groq (existing)
- * - Opportunity Agent: Gemini + DeepSeek R1
+ * Model Assignment (All using Alibaba Qwen qwen3.6-plus):
+ * - Persona Agent: Qwen qwen3.6-plus
+ * - Research Agent: Qwen qwen3.6-plus
+ * - Competitor Agent: Qwen qwen3.6-plus
+ * - Content Generation Agent: Qwen qwen3.6-plus
+ * - Validation Agent: Qwen qwen3.6-plus
+ * - Orchestrator Agent: Qwen qwen3.6-plus
+ * - Opportunity Agent: Qwen qwen3.6-plus
  */
 
 const MODEL_CONFIG = {
-  gemini: {
-    model: "gemini-2.0-flash",
-    provider: "google",
-    apiKeyEnv: "GEMINI_API_KEY",
-    maxTokens: 4096,
+  qwen: {
+    model: "qwen3.6-plus",
+    provider: "qwen",
+    apiKeyEnv: "QWEN_API_KEY",
+    maxTokens: 8192,
     temperature: 0.7
   },
-  deepseek: {
-    model: "deepseek/deepseek-r1",
-    provider: "openrouter",
-    apiKeyEnv: "OPENROUTER_API_KEY",
-    baseURL: "https://openrouter.ai/api/v1",
-    maxTokens: 4096,
-    temperature: 0.6
-  },
-  groq: {
-    model: "llama-3.1-8b-instant",
-    provider: "groq",
-    apiKeyEnv: "GROQ_API_KEY",
-    maxTokens: 4000,
-    temperature: 0.7
-  },
-  groqLightweight: {
-    model: "llama-3.1-8b-instant",
-    provider: "groq",
-    apiKeyEnv: "GROQ_API_KEY",
+  qwenLightweight: {
+    model: "qwen3.6-plus",
+    provider: "qwen",
+    apiKeyEnv: "QWEN_API_KEY",
     maxTokens: 2000,
     temperature: 0.3
   }
 };
 
 const AGENT_MODEL_MAP = {
-  personaAgent: "gemini",
-  researchAgent_broad: "gemini",
-  researchAgent_analytical: "deepseek",
-  competitorAgent: "deepseek",
-  orchestratorAgent: "groq",
-  contentGenerationAgent: "groq",
-  validationAgent: "groqLightweight",
-  opportunityAgent_broad: "gemini",
-  opportunityAgent_analytical: "deepseek"
+  personaAgent: "qwen",
+  researchAgent_broad: "qwen",
+  researchAgent_analytical: "qwen",
+  competitorAgent: "qwen",
+  orchestratorAgent: "qwen",
+  contentGenerationAgent: "qwen",
+  validationAgent: "qwenLightweight",
+  opportunityAgent_broad: "qwen",
+  opportunityAgent_analytical: "qwen"
 };
 
 module.exports = { MODEL_CONFIG, AGENT_MODEL_MAP };

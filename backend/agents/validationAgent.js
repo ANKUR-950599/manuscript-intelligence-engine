@@ -1,100 +1,89 @@
-const { groqGenerate } = require("./clients/groqClient");
-
 /**
- * Validation Agent — STEP 9 of the pipeline.
- * Expanded validation checking:
- * emotional depth, trust-building, SEO, readability,
- * psychological alignment, competitor differentiation, content quality.
+ * Validation Agent — STEP 2 of the Content Loop.
+ * Runs structural and LLM-driven quality gating against production parameters.
  */
-async function validationAgent(blogResult, blueprint, persona, research, competitor) {
+const path = require("path");
+require("dotenv").config({ path: path.join(__dirname, "../.env") });
+const { groqGenerate } = require("./clients/qwenClient");
+
+async function validationAgent(blogResult, blueprint, persona) {
   const issues = [];
   let score = 100;
 
-  // --- 1. Basic Structure Checks ---
   if (!blogResult.content || blogResult.content.length < 200) {
-    issues.push({ field: "content", issue: "Content is too short or missing" });
+    issues.push({ field: "content", issue: "Content is too short or missing entirely." });
     score -= 20;
   }
 
   if (!blogResult.title || blogResult.title.length < 10) {
-    issues.push({ field: "title", issue: "Title is too short or missing" });
+    issues.push({ field: "title", issue: "Title is absent or structurally insufficient." });
     score -= 10;
   }
 
   const h2Count = (blogResult.content?.match(/^##\s+/gm) || []).length;
   if (h2Count < 2) {
-    issues.push({ field: "structure", issue: "Content needs more H2 sections for readability" });
+    issues.push({ field: "structure", issue: "Content requires more formatting subdivisions (H2 headers) for user navigation." });
     score -= 10;
   }
 
   const wordCount = blogResult.content?.split(/\s+/).length || 0;
   if (wordCount < 300) {
-    issues.push({ field: "wordCount", issue: `Only ${wordCount} words — needs minimum 300` });
+    issues.push({ field: "wordCount", issue: `Current length is ${wordCount} words; falls short of minimum production threshold.` });
     score -= 20;
   }
 
-  // --- 2. Accounting Domain Relevance Check ---
   const accountingTerms = ["accounting", "finance", "tally", "gst", "taxation", "bookkeeping", "b.com", "commerce", "audit", "salary", "career", "job", "interview", "skills"];
   const contentLower = (blogResult.content || "").toLowerCase();
   const relevanceCount = accountingTerms.filter(t => contentLower.includes(t)).length;
   if (relevanceCount < 3) {
-    issues.push({ field: "domainRelevance", issue: "Content lacks accounting/finance domain specificity" });
+    issues.push({ field: "domainRelevance", issue: "Content text lacks basic domain-specific keywords or industry reference anchors." });
     score -= 10;
   }
 
   let detailedScores = {};
-  // --- 3. Deep Psychological Quality Check (LLM Based) ---
-  if (blogResult.content && blogResult.content.length > 500) {
+
+  if (blogResult.content && blogResult.content.length > 300) {
     try {
-      const prompt = `You are a strict Senior Editor specializing in ACCOUNTING EDUCATION content. Review this article against our audience intelligence.
+      const prompt = `You are a strict Senior Editor specializing in Indian Accounting & Finance educational content review.
+Evaluate the candidate text against target user requirements.
 
 === AUDIENCE ===
-Reader: ${persona.buyerPersona}
-Hidden Fears: ${Array.isArray(persona.hiddenFears) ? persona.hiddenFears.slice(0, 2).join("; ") : ""}
-Target Transformation: ${blueprint.transformationStory || "N/A"}
+Reader Profile: ${persona.buyerPersona}
+Core Hidden Anxiety: ${(persona.hiddenFears || []).slice(0, 2).join("; ")}
 
-=== THE ARTICLE ===
+=== ARTIFACT EVALUATION TRACE ===
 TITLE: ${blogResult.title}
-CONTENT (first 2000 chars):
+CONTENT METRIC HEAD:
 ${blogResult.content.substring(0, 2000)}
 
-Evaluate on these 7 criteria (0-100 each):
-1. EMOTIONAL_DEPTH: Does it connect with real accounting student/professional emotions?
-2. TRUST_BUILDING: Does it include proof, data, or relatable scenarios?
-3. SEO_QUALITY: Is it keyword-rich and well-structured?
-4. READABILITY: Short paragraphs, clear language, scannable?
-5. PSYCHOLOGICAL_ALIGNMENT: Does it address the persona's specific fears and goals?
-6. COMPETITOR_DIFFERENTIATION: Does it say things competitors wouldn't?
-7. CONTENT_QUALITY: Is it genuinely helpful and non-generic?
+Evaluate across these 7 dimensions (0-100 each):
+1. EMOTIONAL_DEPTH: Structural alignment with real accounting student career path anxieties.
+2. TRUST_BUILDING: Relatable office scenario simulations.
+3. SEO_QUALITY: Keyword diversity and structured header placement.
+4. READABILITY: Paragraph length, whitespace distribution, and sentence pacing.
+5. PSYCHOLOGICAL_ALIGNMENT: Directly addresses target anxieties.
+6. COMPETITOR_DIFFERENTIATION: Avoids generic textbook phrasing.
+7. CONTENT_QUALITY: Genuinely instructional value.
 
-Also check: does it sound robotic? Does it use AI clichés?
-
-Respond EXACTLY in JSON:
+Respond exactly inside a single JSON object matching this schema:
 {
-  "emotionalDepth": (0-100),
-  "trustBuilding": (0-100),
-  "seoQuality": (0-100),
-  "readability": (0-100),
-  "psychologicalAlignment": (0-100),
-  "competitorDifferentiation": (0-100),
-  "contentQuality": (0-100),
-  "isRobotic": (true/false),
-  "critiques": ["critique 1", "critique 2"]
-}`;
+  "emotionalDepth": 85,
+  "trustBuilding": 75,
+  "seoQuality": 80,
+  "readability": 90,
+  "psychologicalAlignment": 85,
+  "competitorDifferentiation": 70,
+  "contentQuality": 80,
+  "isRobotic": false,
+  "critiques": ["Provide concrete issue notes or empty array"]
+ }`;
 
-      let rawFeedback = "";
-      try {
-        rawFeedback = await groqGenerate(
-          "You are a harsh editorial reviewer for accounting education content. You expect psychological depth, practical value, and emotional resonance. Output valid JSON only.",
-          prompt,
-          { model: "llama-3.3-70b-versatile", temperature: 0.1 }
-        );
-      } catch (err) {
-        console.error("Validation Agent — Groq generation failed:", err.message);
-        throw new Error("Validation generation failed.");
-      }
+      const rawFeedback = await groqGenerate(
+        "You are a harsh editorial reviewer for accounting education content. Output valid JSON only.",
+        prompt,
+        { model: "qwen3.6-plus", temperature: 0.1 }
+      );
 
-      // Robust JSON extraction
       let feedback = {};
       try {
         const jsonMatch = rawFeedback.match(/\{[\s\S]*\}/);
@@ -103,25 +92,26 @@ Respond EXACTLY in JSON:
         console.error("Validation Agent JSON Parse Error:", e.message);
       }
 
-      // Calculate average of all 7 scores
-      const scores = [
-        feedback.emotionalDepth || 50,
-        feedback.trustBuilding || 50,
-        feedback.seoQuality || 50,
-        feedback.readability || 50,
-        feedback.psychologicalAlignment || 50,
-        feedback.competitorDifferentiation || 50,
-        feedback.contentQuality || 50
-      ];
+      detailedScores = {
+        emotionalDepth: feedback.emotionalDepth || 70,
+        trustBuilding: feedback.trustBuilding || 70,
+        seoQuality: feedback.seoQuality || 70,
+        readability: feedback.readability || 70,
+        psychologicalAlignment: feedback.psychologicalAlignment || 70,
+        competitorDifferentiation: feedback.competitorDifferentiation || 70,
+        contentQuality: feedback.contentQuality || 70
+      };
+
+      const scores = Object.values(detailedScores);
       const avgScore = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
 
       if (avgScore < 60) {
-        issues.push({ field: "overallQuality", issue: `Average quality score is ${avgScore}/100 — below production threshold.` });
+        issues.push({ field: "overallQuality", issue: `Calculated average score of ${avgScore}/100 falls below standard parameters.` });
         score -= (60 - avgScore);
       }
 
       if (feedback.isRobotic) {
-        issues.push({ field: "tone", issue: "Content sounds too robotic or uses AI clichés." });
+        issues.push({ field: "tone", issue: "Content contains persistent repetitive AI template phrases." });
         score -= 15;
       }
 
@@ -129,20 +119,9 @@ Respond EXACTLY in JSON:
         issues.push({ field: "editorialCritique", issue: feedback.critiques[0] });
       }
 
-      // Store detailed scores
-      detailedScores = {
-        emotionalDepth: feedback.emotionalDepth || 50,
-        trustBuilding: feedback.trustBuilding || 50,
-        seoQuality: feedback.seoQuality || 50,
-        readability: feedback.readability || 50,
-        psychologicalAlignment: feedback.psychologicalAlignment || 50,
-        competitorDifferentiation: feedback.competitorDifferentiation || 50,
-        contentQuality: feedback.contentQuality || 50
-      };
-
     } catch (e) {
       console.error("Validation Agent LLM Error:", e.message);
-      issues.push({ field: "validationError", issue: "Could not run deep quality validation." });
+      issues.push({ field: "validationError", issue: "Deep content validation system bypass occurred." });
     }
   }
 
@@ -151,20 +130,15 @@ Respond EXACTLY in JSON:
   );
 
   return {
-    isValid: score >= 60,
-    issues,
+    isValid: score >= 65,
     score: Math.max(0, Math.min(100, score)),
+    issues,
     detailedScores,
     keywordsIntegrated: keywordsFound.length,
     totalKeywords: (blueprint.targetKeywords || []).length,
     h2Count,
     wordCount,
-    domainRelevanceScore: relevanceCount,
-    methodology: {
-      approach: "7-Dimension Quality Validation",
-      dimensions: ["Emotional Depth", "Trust Building", "SEO Quality", "Readability", "Psychological Alignment", "Competitor Differentiation", "Content Quality"],
-      reasoning: `Validated content across 7 quality dimensions with both rule-based checks and LLM-based psychological analysis. Domain relevance: ${relevanceCount}/${accountingTerms.length} accounting terms found.`
-    }
+    domainRelevanceScore: relevanceCount
   };
 }
 

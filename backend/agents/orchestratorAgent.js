@@ -1,166 +1,97 @@
-const { groqGenerate } = require("./clients/groqClient");
-
 /**
- * Orchestrator Agent — STEP 4 of the autonomous pipeline. The Central Brain.
- * Combines persona insights, research data, competitor analysis, and memory history
- * with location intelligence to decide: final strategy, emotional angle, and content direction.
+ * Orchestrator Agent — STEP 4 of the Heavy Run/Refill Loop.
+ * Synthesizes research and competitor blind spots into exactly 6 highly structured, ranked topics.
  */
-async function orchestratorAgent(persona, research, competitor, memory, domainResult) {
+const path = require("path");
+require("dotenv").config({ path: path.join(__dirname, "../.env") });
+const { groqGenerate } = require("./clients/qwenClient");
+
+async function orchestratorAgent(persona, research, competitor) {
   const targetLocation = persona.targetLocation || research.targetLocation || "Kolkata";
 
-  const prompt = `You are the Chief Content Strategist for an ACCOUNTING & FINANCE education brand targeting students in ${targetLocation}, India. You are the "central brain" that synthesizes all intelligence into a precise content strategy.
+  const prompt = `You are the Chief Content Strategist for an Indian Accounting & Finance education brand targeting students in ${targetLocation}. You are the central orchestrator brain. Your task is to analyze the buyer persona profile, empirical research vectors, and competitor weaknesses to build a structured batch blueprint containing exactly 6 high-impact topics. These topics will be queued sequentially for production.
+  
+TARGET PERSONA DETAILS:
+${JSON.stringify(persona, null, 2)}
 
-=== DOMAIN POSITIONING ===
-Industry: ${domainResult.industry}
-Domain: ${domainResult.domain}
-Niche: ${domainResult.niche}
-Target Audience: ${domainResult.audienceType}
-Audience Category: ${domainResult.audienceCategory}
-Target Location: ${targetLocation}
+RESEARCH DATA CORPUS:
+${JSON.stringify(research, null, 2)}
 
-=== PERSONA INTELLIGENCE ===
-Reader: ${persona.buyerPersona}
-Identity Belief: ${persona.identityBelief}
-Hidden Fears: ${Array.isArray(persona.hiddenFears) ? persona.hiddenFears.join("; ") : (persona.hiddenFears || "")}
-Live Situations: ${Array.isArray(persona.liveSituations) ? persona.liveSituations.slice(0, 3).join("; ") : (persona.liveSituations || "")}
-Emotional Triggers: ${Array.isArray(persona.emotionalTriggers) ? persona.emotionalTriggers.join(", ") : (persona.emotionalTriggers || "")}
-Transformation: From "${persona.beforeState}" to "${persona.afterState}"
+COMPETITOR INTEL & GAPS:
+${JSON.stringify(competitor, null, 2)}
 
-=== RESEARCH INTELLIGENCE ===
-Emotional Search Drivers: ${(research.emotionalSearchPatterns || []).join(", ")}
-AI Search Queries: ${(research.aiSearchQueries || []).join(", ")}
-Trust Signals: ${(research.trustSignals || []).join(", ")}
-Trending: ${(research.trendInsights || []).join(", ")}
-Location Search Patterns: ${(research.locationSearchPatterns || []).join(", ")}
-Career Anxieties: ${(research.careerAnxietyPatterns || []).join(", ")}
-SEO Gaps: ${(research.seoGaps || []).join(", ")}
+OUTPUT REQUIREMENT:
+You must generate exactly 6 highly distinct content topics ranked from Rank 1 to Rank 6. Rank 1 must represent the most immediate, conversion-heavy low-hanging fruit. Each topic block must be fully fleshed out with precise editorial parameters.
 
-=== COMPETITOR INTELLIGENCE ===
-Emotional Gaps: ${(competitor.emotionalGaps || []).join(", ")}
-Trust Gaps: ${(competitor.trustGaps || []).join(", ")}
-Blind Spots: ${(competitor.competitorBlindSpots || []).join(", ")}
-SEO Gaps: ${(competitor.seoGaps || []).join(", ")}
-Strategy: ${competitor.strategyNotes}
+You must respond in this EXACT structural layout block without deviation:
+[START_TOPICS_LIST]
 
-=== MEMORY CONTEXT ===
-Previous Blogs: ${memory.totalBlogsGenerated || 0}
-Avoid Repeating: ${(memory.previousTitles || []).slice(-5).join(", ")}
-Successful Strategies: ${(memory.emotionalStrategies || []).slice(-3).join(", ")}
+TOPIC_RANK: 1
+CORE_TITLE: (High impact, optimized click-worthy title addressing an immediate intent)
+CORE_ANGLE: (The strategic positioning perspective that differentiates this topic from competitor content)
+EMOTIONAL_HOOK: (The psychological anxiety trigger or aspirational hook to lead with)
+PAIN_POINTS_ADDRESSED: (List 3 precise localized structural frustrations, semicolon-separated)
+TARGET_KEYWORDS: (4 highly relevant localized SEO terms, comma-separated)
+BENCHMARK_SEO_GAP: (The unique angle competitors miss on this topic)
+ESTIMATED_CATEGORY: (ACCOUNTING or FINANCE)
 
-=== YOUR TASK ===
-Synthesize ALL intelligence above into a content blueprint. The content must:
-1. Address the specific persona's emotional reality IN ${targetLocation}
-2. Exploit competitor blind spots and SEO gaps
-3. Answer the search queries they're actually asking
-4. Build trust using the signals they need
-5. Include ${targetLocation}-specific references and context
-6. NOT repeat any previous titles
-7. Target localized SEO keywords
+TOPIC_RANK: 2
+...
+(Repeat structure precisely for topics 2, 3, 4, 5, and 6)
 
-Respond in this EXACT format:
+[END_TOPICS_LIST]`;
 
-[BEGIN_BLUEPRINT]
-BLOG_TITLE: (emotionally specific title for ${targetLocation} accounting audience)
-EMOTIONAL_HOOK: (opening hook that validates their specific pain in ${targetLocation})
-EMOTIONAL_ANGLE: (the primary emotional strategy for this content)
-TRANSFORMATION_STORY: (the journey from their current pain to their desired success)
-TRUST_BUILDING_STRATEGY: (how to build authority for this specific audience)
-SECTIONS_TO_COVER: (comma-separated list of 4-5 focused H2 sections)
-PERSUASION_CTA: (emotionally obvious next step for this audience)
-POSITIONING_STRATEGY: (how to win against competitors in this niche)
-TARGET_KEYWORDS: (5-6 SEO keywords including ${targetLocation}-specific terms)
-CATEGORY: (ACCOUNTING or FINANCE — 1 word)
-WORD_COUNT: (1000-1500)
-CONTENT_DIRECTION: (1-2 sentences on overall content strategy and reasoning)
-[END_BLUEPRINT]`;
-
-  const fallbackResult = {
-    blogTitle: `The ${domainResult.audienceCategory}'s Guide to Breaking Into Accounting in ${targetLocation}`,
-    emotionalHook: `Connecting with the specific frustrations of ${domainResult.audienceType} in ${targetLocation}.`,
-    emotionalAngle: "Empathy + practical roadmap",
-    transformationStory: `From ${persona.beforeState || "confusion"} to ${persona.afterState || "confidence"}.`,
-    trustBuildingStrategy: "Real student stories, practical curriculum proof, salary data.",
-    sectionsToCover: ["The Real Problem Nobody Talks About", "What Actually Works", "The Step-by-Step Path", "From Theory to Job Offer"],
-    ctaStrategy: "Start your practical accounting journey today.",
-    rankingStrategy: "Position against theory-heavy competitors with practical, emotional content.",
-    category: "ACCOUNTING",
-    targetKeywords: research.keywords || [`accounting course ${targetLocation}`, "practical accounting", "commerce career"],
-    wordCount: 1200,
-    contentAngle: "Practical transformation with emotional depth.",
-    contentDirection: `Psychology-driven practical accounting content for ${targetLocation}.`,
-    targetLocation,
-    methodology: {
-      approach: "Multi-Intelligence Synthesis",
-      inputs: ["Persona Psychology", "Research Data", "Competitor Analysis", "Memory History", "Location Intelligence"],
-      reasoning: "Combined 5 intelligence sources to determine optimal content strategy.",
-      decisions: {
-        emotionalAngle: "Empathy-first approach based on persona's hidden fears",
-        rankingApproach: "Exploit competitor blind spots in emotional connection",
-        contentDirection: "Practical transformation storytelling",
-        locationFocus: targetLocation
-      }
-    }
-  };
-
-  let raw = "";
   try {
-    raw = await groqGenerate(
-      `You are a strategic content brain for accounting education targeting ${targetLocation}. You combine psychology, research, competitor gaps, and memory into a precise content blueprint. Every decision must be data-driven and psychologically grounded. Focus exclusively on accounting, finance, GST, Tally, taxation, and commerce career content. Always include location-specific context.`,
+    const rawBlueprint = await groqGenerate(
+      "You are an elite multi-agent system director and master copywriter. Output clear strategies matching strict layout block constraints.",
       prompt,
-      { model: "llama-3.3-70b-versatile", temperature: 0.7 }
+      { model: "qwen3.6-plus", temperature: 0.4 }
     );
-  } catch (err) {
-    console.error("Orchestrator Agent — Groq generation failed:", err.message);
-    return fallbackResult;
+
+    return parseBatchTopics(rawBlueprint, targetLocation);
+  } catch (error) {
+    console.error("Orchestrator Agent Failure:", error.message);
+    throw error;
   }
-  const block = extractBlock(raw, "[BEGIN_BLUEPRINT]", "[END_BLUEPRINT]");
-
-  if (!block) return fallbackResult;
-
-  return {
-    blogTitle: extractField(block, "BLOG_TITLE") || fallbackResult.blogTitle,
-    emotionalTone: extractField(block, "EMOTIONAL_HOOK"),
-    emotionalHook: extractField(block, "EMOTIONAL_HOOK"),
-    emotionalAngle: extractField(block, "EMOTIONAL_ANGLE"),
-    transformationStory: extractField(block, "TRANSFORMATION_STORY"),
-    trustBuildingStrategy: extractField(block, "TRUST_BUILDING_STRATEGY"),
-    sectionsToCover: extractList(block, "SECTIONS_TO_COVER"),
-    ctaStrategy: extractField(block, "PERSUASION_CTA"),
-    rankingStrategy: extractField(block, "POSITIONING_STRATEGY"),
-    targetKeywords: extractList(block, "TARGET_KEYWORDS"),
-    category: (extractField(block, "CATEGORY") || "ACCOUNTING").toUpperCase().split(" ")[0],
-    wordCount: parseInt(extractField(block, "WORD_COUNT")) || 1200,
-    contentAngle: extractField(block, "TRANSFORMATION_STORY"),
-    contentDirection: extractField(block, "CONTENT_DIRECTION"),
-    targetLocation,
-    methodology: {
-      approach: "Multi-Intelligence Synthesis Engine",
-      inputs: ["Deep Persona Psychology", "Dual-Model Research", "7-Framework Competitor Analysis", "Self-Learning Memory", "Location Intelligence"],
-      reasoning: `Synthesized ${domainResult.audienceCategory} persona insights with research data, competitor gaps, and localized context. Avoided ${(memory.previousTitles || []).length} previously generated titles using Llama 3.3 Intelligence.`,
-      decisions: {
-        emotionalAngle: extractField(block, "EMOTIONAL_ANGLE"),
-        rankingApproach: extractField(block, "POSITIONING_STRATEGY"),
-        contentDirection: extractField(block, "CONTENT_DIRECTION")
-      }
-    }
-  };
 }
 
-function extractBlock(text, start, end) {
-  const s = text.indexOf(start);
-  const e = text.indexOf(end, s + start.length);
-  if (s === -1 || e === -1) return null;
-  return text.substring(s + start.length, e).trim();
+function parseBatchTopics(text, targetLocation) {
+  const startTag = "[START_TOPICS_LIST]";
+  const endTag = "[END_TOPICS_LIST]";
+  const s = text.indexOf(startTag);
+  const e = text.indexOf(endTag);
+
+  if (s === -1 || e === -1) {
+    throw new Error("Invalid output format returned from Qwen Orchestrator");
+  }
+
+  const block = text.substring(s + startTag.length, e).trim();
+  const rawTopicBlocks = block.split(/TOPIC_RANK:\s*/i).filter(Boolean);
+  
+  const topicsArray = rawTopicBlocks.map((chunk) => {
+    const lines = chunk.split("\n");
+    const rank = parseInt(lines[0].trim());
+    
+    return {
+      rank: rank || 1,
+      title: extractSubField(chunk, "CORE_TITLE"),
+      coreAngle: extractSubField(chunk, "CORE_ANGLE"),
+      emotionalHook: extractSubField(chunk, "EMOTIONAL_HOOK"),
+      painPointsAddressed: extractSubField(chunk, "PAIN_POINTS_ADDRESSED").split(";").map(p => p.trim()).filter(Boolean),
+      targetKeywords: extractSubField(chunk, "TARGET_KEYWORDS").split(",").map(k => k.trim()).filter(Boolean),
+      seoGap: extractSubField(chunk, "BENCHMARK_SEO_GAP"),
+      category: extractSubField(chunk, "ESTIMATED_CATEGORY") || "ACCOUNTING",
+      targetLocation,
+      status: "pending"
+    };
+  });
+
+  return topicsArray;
 }
 
-function extractField(block, key) {
-  const match = block.match(new RegExp(`${key}:\\s*(.+)`, "i"));
+function extractSubField(chunk, key) {
+  const match = chunk.match(new RegExp(`${key}:\\s*(.+)`, "i"));
   return match ? match[1].trim() : "";
-}
-
-function extractList(block, key) {
-  const val = extractField(block, key);
-  return val ? val.split(",").map(s => s.trim()).filter(s => s.length > 0) : [];
 }
 
 module.exports = orchestratorAgent;

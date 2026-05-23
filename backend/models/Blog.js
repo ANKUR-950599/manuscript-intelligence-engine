@@ -1,122 +1,32 @@
 const mongoose = require("mongoose");
 
-const faqSchema = new mongoose.Schema({
-  question: { type: String, required: true },
-  answer: { type: String, required: true },
-}, { _id: false });
-
-const blogSchema = new mongoose.Schema(
-  {
-    title: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    content: {
-      type: String,
-      required: true,
-    },
-    summary: {
-      type: String,
-      required: true,
-    },
-    metaDescription: {
-      type: String,
-      default: "",
-    },
-    h1: {
-      type: String,
-      default: "",
-    },
-    h2s: {
-      type: [String],
-      default: [],
-    },
-    category: {
-      type: String,
-      default: "ACCOUNTING",
-      trim: true,
-    },
-    description: {
-      type: String,
-      required: false,
-    },
-    tags: {
-      type: [String],
-      default: [],
-    },
-    faq: {
-      type: [faqSchema],
-      default: [],
-    },
-    cta: {
-      type: String,
-      default: "",
-    },
-    wordCount: {
-      type: Number,
-      default: 0,
-    },
-    readingTime: {
-      type: Number,
-      default: 1,
-    },
-    // Business context that generated this blog
-    businessContext: {
-      companyName: String,
-      domain: String,
-      industry: String,
-    },
-    // Validation score
-    validationScore: {
-      type: Number,
-      default: 100,
-    },
-    likes: {
-      type: Number,
-      default: 0,
-    },
-    dislikes: {
-      type: Number,
-      default: 0,
-    },
-    // NEW: Autonomous system fields
-    audienceCategory: {
-      type: String,
-      default: "",
-    },
-    targetLocation: {
-      type: String,
-      default: "",
-    },
-    generatedBy: {
-      type: String,
-      enum: ["manual", "autonomous"],
-      default: "manual",
-    },
-    pipelineRunId: {
-      type: String,
-      default: "",
-    },
-    opportunityScore: {
-      type: Number,
-      default: 0,
-    },
-    // SEO tracking
-    seoKeywords: {
-      type: [String],
-      default: [],
-    },
-    emotionalHook: {
-      type: String,
-      default: "",
-    },
-    createdAt: {
-      type: Date,
-      default: Date.now,
-    },
-  },
-  { timestamps: false }
-);
+const blogSchema = new mongoose.Schema({
+  title: { type: String, required: true },
+  slug: { type: String, required: true, unique: true },
+  content: { type: String, required: true },
+  excerpt: String,
+  category: { type: String, default: "ACCOUNTING" },
+  targetKeywords: [String],
+  wordCount: Number,
+  metaDescription: String,
+  socialHooks: [String],
+  
+  // New Additions: Multi-channel 1-Week Content Calendar Arrays
+  // Note: Multi-channel content (WhatsApp/email week plans) are stored in a separate
+  // ContentCalendar collection and are intentionally NOT embedded in the Blog model
+  // to prevent accidental exposure via public blog APIs.
+  
+  faq: [
+    {
+      question: String,
+      answer: String
+    }
+  ],
+  readingTime: Number,
+  status: { type: String, enum: ["draft", "published"], default: "draft" },
+  opportunityScore: Number,
+  durationMs: Number,
+  createdAt: { type: Date, default: Date.now }
+});
 
 module.exports = mongoose.model("Blog", blogSchema);

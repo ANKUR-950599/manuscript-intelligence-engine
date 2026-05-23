@@ -1,52 +1,137 @@
 /**
- * GEMINI AI CLIENT
- * Wrapper for Google Gemini API calls.
- * Used by: Persona Agent, Research Agent (broad), Opportunity Agent
+ * LEGACY GROQ CLIENT ALIAS
+ * Uses Groq model llama-3.3-70b-versatile for text generation
+ * and Groq embeddings for vector search.
  */
-const { GoogleGenAI } = require("@google/genai");
 
-let _client = null;
+const GROQ_API_KEY = process.env.GROQ_API_KEY || "";
+const DEFAULT_MODEL = process.env.GROQ_MODEL || "llama-3.3-70b-versatile";
+const DEFAULT_EMBEDDING_MODEL = process.env.GROQ_EMBEDDING_MODEL || "textembedding-gecko-001";
+const BASE_URL = process.env.GROQ_BASE_URL || "https://groq.googleapis.com/v1";
 
-function getGeminiClient() {
-  if (!_client) {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      console.warn("⚠️ GEMINI_API_KEY not set. Gemini calls will fail.");
-    }
-    _client = new GoogleGenAI({ apiKey: apiKey || "PLACEHOLDER" });
+function ensureApiKey() {
+  if (!GROQ_API_KEY) {
+    throw new Error("Missing GROQ_API_KEY environment variable for Groq API access.");
   }
-  return _client;
 }
 
-/**
- * Generate text using Gemini.
- * @param {string} systemPrompt - System instruction
- * @param {string} userPrompt - User prompt
- * @param {object} options - { model, temperature, maxTokens }
- * @returns {string} Generated text
- */
-async function geminiGenerate(systemPrompt, userPrompt, options = {}) {
-  const client = getGeminiClient();
-  const model = options.model || "gemini-2.0-flash";
-  const temperature = options.temperature || 0.7;
-  const maxTokens = options.maxTokens || 4096;
+function buildGroqHeaders() {
+  const headers = {
+    "Content-Type": "application/json",
+    "Accept": "application/json"
+  };
+
+  const trimmedKey = GROQ_API_KEY.trim();
+  const looksLikeApiKey = /^AIza/.test(trimmedKey);
+
+  if (!looksLikeApiKey) {
+    headers.Authorization = `Bearer ${trimmedKey}`;
+  }
+
+  return headers;
+}
+
+async function parseGroqResponse(response) {
+  const text = await response.text();
+  let data = null;
 
   try {
-    const response = await client.models.generateContent({
-      model,
-      contents: userPrompt,
-      config: {
-        systemInstruction: systemPrompt,
-        temperature,
-        maxOutputTokens: maxTokens,
-      }
+    data = JSON.parse(text);
+  } catch (parseError) {
+    return { status: response.status, ok: response.ok, rawText: text, error: parseError };
+  }
+
+  return { status: response.status, ok: response.ok, data, rawText: text };
+}
+
+async function groqGenerate(systemPrompt, userPrompt, options = {}) {
+  ensureApiKey();
+
+  const model = options.model || DEFAULT_MODEL;
+  const temperature = options.temperature ?? 0.7;
+  const maxOutputTokens = options.maxTokens ?? 4096;
+  const url = new URL(`${BASE_URL}/models/${model}:generateText`);
+  const trimmedKey = GROQ_API_KEY.trim();
+  if (/^AIza/.test(trimmedKey)) {
+    url.searchParams.set("key", trimmedKey);
+  }
+
+  const payload = {
+    prompt: {
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt }
+      ]
+    },
+    temperature,
+    maxOutputTokens
+  };
+
+  try {
+    const response = await fetch(url.toString(), {
+      method: "POST",
+      headers: buildGroqHeaders(),
+      body: JSON.stringify(payload)
     });
 
-    return response.text || "";
+    const { ok, data, rawText } = await parseGroqResponse(response);
+    if (!ok) {
+      const errorMessage = data?.error?.message || data?.error || rawText || response.statusText;
+      throw new Error(`Groq generation failed: ${errorMessage}`);
+    }
+
+    return data?.candidates?.[0]?.content || data?.output?.[0]?.content || data?.results?.[0]?.output?.content || "";
   } catch (error) {
-    console.error("Gemini API Error:", error.message);
-    throw new Error(`Gemini generation failed: ${error.message}`);
+    console.error("Groq API Error:", error.message || error);
+    throw new Error(`Groq generation failed: ${error.message || error}`);
   }
 }
 
-module.exports = { geminiGenerate, getGeminiClient };
+async function groqEmbed(input, options = {}) {
+  ensureApiKey();
+
+  const model = options.model || DEFAULT_EMBEDDING_MODEL;
+  const url = new URL(`${BASE_URL}/models/${model}:embedText`);
+  const trimmedKey = GROQ_API_KEY.trim();
+  if (/^AIza/.test(trimmedKey)) {
+    url.searchParams.set("key", trimmedKey);
+  }
+
+  const payload = {
+    input: Array.isArray(input) ? input : [input]
+  };
+
+  try {
+    const response = await fetch(url.toString(), {
+      method: "POST",
+      headers: buildGroqHeaders(),
+      body: JSON.stringify(payload)
+    });
+
+    const { ok, data, rawText } = await parseGroqResponse(response);
+    if (!ok) {
+      const errorMessage = data?.error?.message || data?.error || rawText || response.statusText;
+      throw new Error(`Groq embedding failed: ${errorMessage}`);
+    }
+
+    const embeddings = data?.data?.map(item => item?.embedding).filter(Boolean) || data?.embeddings?.map(item => item?.embedding).filter(Boolean);
+    if (!embeddings || embeddings.length === 0) {
+      throw new Error("Groq embedding response did not contain any embeddings.");
+    }
+
+    return embeddings.length === 1 ? embeddings[0] : embeddings;
+  } catch (error) {
+    console.error("Groq Embedding Error:", error.message || error);
+    throw new Error(`Groq embedding failed: ${error.message || error}`);
+  }
+}
+
+async function fallbackGenerate(systemPrompt, userPrompt, options = {}) {
+  return groqGenerate(systemPrompt, userPrompt, options);
+}
+
+module.exports = {
+  groqGenerate,
+  groqEmbed,
+  fallbackGenerate
+};

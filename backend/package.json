@@ -4,18 +4,20 @@
   "description": "AccountIQ — Production-Level Autonomous AI SEO Content Intelligence System",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
+    "start": "node --dns-result-order=ipv4first server.js",
     "dev": "nodemon server.js"
   },
   "dependencies": {
-    "@google/genai": "^1.0.0",
+    "@xenova/transformers": "^2.0.1",
+    "apify-client": "^2.23.3",
+    "axios": "^1.6.6",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
-    "groq-sdk": "^0.9.1",
     "mongoose": "^8.4.1",
-    "node-cron": "^3.0.3",
-    "uuid": "^10.0.0"
+    "node-cron": "^4.2.1",
+    "openai": "^6.39.0",
+    "uuid": "^14.0.0"
   },
   "devDependencies": {
     "nodemon": "^3.1.4"

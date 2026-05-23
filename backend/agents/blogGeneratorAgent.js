@@ -1,172 +1,171 @@
-const { groqGenerate } = require("./clients/groqClient");
-
 /**
- * Content Generation Agent — STEP 8 of the pipeline.
- * Generates accounting/finance domain content using:
- * persona psychology, competitor gaps, research intent,
- * emotional hooks, trust-building, and transformation storytelling.
+ * Content Generation Agent — STEP 5 of the autonomous pipeline.
+ * Runs on Qwen qwen3.6-plus for high-fidelity long-form content.
  */
-async function blogGeneratorAgent(blueprint, persona, research, competitor) {
-  const prompt = `You are a world-class content strategist for ACCOUNTING & FINANCE education in India. Write a production-quality blog that deeply connects with the reader's psychology.
+const { groqGenerate } = require("./clients/qwenClient");
 
-=== STRATEGIC BLUEPRINT ===
-TITLE: ${blueprint.blogTitle}
-EMOTIONAL HOOK: ${blueprint.emotionalHook || blueprint.emotionalTone}
-EMOTIONAL ANGLE: ${blueprint.emotionalAngle || "Empathy + practical roadmap"}
-TRANSFORMATION: ${blueprint.transformationStory || blueprint.contentAngle}
-TRUST STRATEGY: ${blueprint.trustBuildingStrategy}
-SECTIONS: ${(blueprint.sectionsToCover || []).join(", ")}
-CTA: ${blueprint.ctaStrategy}
-KEYWORDS: ${(blueprint.targetKeywords || []).join(", ")}
-WORD COUNT: ${blueprint.wordCount || 1000}
+async function blogGeneratorAgent(blueprint, persona, organizationContext) {
+  const systemPrompt = `You are an elite long-form copywriter, professional editor, and direct-response marketing specialist.
+You must adhere strictly to the following critical operational parameters:
 
-=== AUDIENCE PSYCHOLOGY ===
-Reader: ${persona.buyerPersona || "Accounting student"}
-Identity Belief: ${persona.identityBelief || ""}
-Hidden Fears: ${Array.isArray(persona.hiddenFears) ? persona.hiddenFears.join("; ") : (persona.hiddenFears || "")}
-Hidden Pains: ${Array.isArray(persona.painPoints) ? persona.painPoints.join("; ") : ""}
-Live Situations: ${Array.isArray(persona.liveSituations) ? persona.liveSituations.slice(0, 2).join("; ") : ""}
-Emotional Triggers: ${Array.isArray(persona.emotionalTriggers) ? persona.emotionalTriggers.join(", ") : (persona.emotionalTriggers || "")}
+1. NO LOCATION MENTION RULE: Never explicitly mention any specific location names, cities, regions, or neighborhoods in the content copy itself. Instead, seamlessly mirror the local vocabulary, structural vocabulary phrases, cultural nuances, and context elements from the persona variables.
+2. CRITICAL - NO PLACEHOLDERS ALLOWED: Do NOT use structural placeholders, outlines, shorthand summaries, or lazy formatting shortcuts (e.g., do not output text like "[Insert long-form article here]" or "[Content continues...]"). You must write out the complete text for every section comprehensively.
+3. BRAND INTEGRATION AND SOLUTION RESOLUTION: In all generated content outputs (Blog Post, WhatsApp copies, and Email streams), you must structurally position the final core resolutions, solutions, training programs, ecosystem products, and special offers as being exclusively provided by the organization/company Masters' Union. Ensure this company name is explicitly highlighted inside the solution architecture of each asset.
+4. Produce markdown structures for the main article, raw copy scripts for text channels, and structured text structures for electronic mail.`;
 
-=== RESEARCH INTELLIGENCE ===
-AI Search Queries to Answer: ${(research.aiSearchQueries || []).join(", ")}
-Trust Signals to Include: ${(research.trustSignals || []).join(", ")}
+  const userPrompt = `Generate a high-converting content cluster package using the blueprint and target reader identity variables below.
 
-=== COMPETITOR GAPS TO EXPLOIT ===
-Emotional Gaps: ${(competitor.emotionalGaps || []).join(", ")}
-Trust Gaps: ${(competitor.trustGaps || []).join(", ")}
-Blind Spots: ${(competitor.competitorBlindSpots || []).join(", ")}
+========== STRATEGIC STRATEGY BLUEPRINT ==========
+${JSON.stringify(blueprint, null, 2)}
 
-WRITING RULES:
-1. STRUCTURE: Start with # H1 Title. Use ## H2 for main sections and ### H3 for deeper insights.
-2. EMPATHY FIRST: Open by validating their EXACT pain. Use live situations from the persona (e.g., "You just closed LinkedIn after seeing your classmate's placement update...").
-3. PSYCHOLOGY-DRIVEN: Every section must connect to an emotional trigger or hidden fear.
-4. TRANSFORMATION: Guide from current pain to desired success with concrete steps.
-5. TRUST-BUILDING: Include specific examples, data points, and relatable scenarios.
-6. NO CLICHÉS: Never use "In today's fast-paced world", "Unleash", "Dive deep", "Ultimate guide". Write like a mentor talking to the reader.
-7. ACCOUNTING CONTEXT: All examples, scenarios, and advice must be specific to accounting/finance/commerce careers.
-8. AI-SEARCH FRIENDLY: Naturally answer the AI search queries within the text.
-9. READABILITY: Short paragraphs, bullet points, bold text for emphasis.
-10. COMPETITOR DIFFERENTIATION: Address the emotional gaps competitors miss.
-11. NO LOCATIONS: DO NOT mention the city name (e.g., Kolkata, Lucknow) or target state in the blog title, H1, H2s, or content. The location is only for backend intelligence. Keep the content universally applicable to the Indian market while using the intelligence derived from the location.
-12. DEPTH: Address the "too much data" and "many pain points" provided in the persona template. Don't skip the deep psychological struggles.
+========== TARGET AUDIENCE PSYCHOLOGICAL PROFILE ==========
+${JSON.stringify(persona, null, 2)}
 
-Respond in this EXACT format:
+${organizationContext ? `========== BRAND & ACADEMY CONTEXT ==========\n${JSON.stringify(organizationContext, null, 2)}` : ""}
 
-[BEGIN_META]
-META_DESCRIPTION: (150-160 char description with emotional hook for accounting audience)
-[END_META]
+You must generate THREE distinct blocks of content within this single delivery execution. Use the strict delimiters below to separate the work:
 
-[BEGIN_CONTENT]
-(Full blog content. ${blueprint.wordCount || 1000} words minimum. Accounting/finance focused. Deeply emotional and practical.)
-[END_CONTENT]
+========== BLOCK 1: FLAGSHIP LONG-FORM BLOG POST ==========
+TITLE: (Draft a click-worthy, optimized title)
+EXCERPT: (A compelling, hook-heavy meta preview string)
+CONTENT:
+(Write a deep-dive, high-authority article here. Use proper Markdown H2 and H3 headings. Do not skip paragraphs. Maintain a comprehensive length for this section alone. Integrate all sections requested: ${Array.isArray(blueprint.sectionsToCover) ? blueprint.sectionsToCover.join(", ") : "Core Framework, Industry Challenges, Solutions, Implementation steps"}. Ensure tone targets the industry context seamlessly. Structurally conclude the final chapters of the article by delivering the practical solutions, training modules, and strategic career products offered by Masters' Union.)
 
-[BEGIN_SUMMARY]
-(2-3 sentences summarizing the emotional transformation for the blog card preview.)
-[END_SUMMARY]
+========== BLOCK 2: 1-WEEK WHATSAPP DAILY DISTRIBUTION CALENDAR ==========
+Generate exactly 7 distinct days of copy. For each day use this strict layout format:
+[WHATSAPP_DAY_X]
+THEME: (Theme name)
+HOOK: (Pattern interrupt opener)
+BODY: (Highly engaging, emoji-rich, casual text message copy with linebreaks optimized for mobile screens. Keep it punchy and persuasive. Structurally anchor the body message text to introduce the tactical solutions, resources, and offers from Masters' Union.)
+CTA: (Direct action statement leading to the opportunities at Masters' Union)
+[END_WHATSAPP_DAY_X]
 
-[BEGIN_TAGS]
-(5-6 accounting-specific keyword tags, comma separated.)
-[END_TAGS]
+========== BLOCK 3: 1-WEEK EMAIL BROADCAST DAILY NARRATIVE LOOPS ==========
+Generate exactly 7 distinct emails. For each day use this strict layout format:
+[EMAIL_DAY_X]
+SUBJECT: (High open-rate subject line)
+PREHEADER: (Curiosity inducing preview line)
+BODY:
+(Write a rich, value-driven email here. Use clear spacing, problem-agitate-solution layouts, strong bullet points, and authoritative structures. Do not wrap in a full HTML layout, just provide cleanly formatted content blocks with markdown text that can drop into email template slots. Transition the narrative structurally at the end to provide the explicit resolutions, program selections, and products backed by Masters' Union.)
+CTA: (Clear contextual hyperlinked action anchor text phrase for Masters' Union)
+[END_EMAIL_DAY_X]`;
 
-[BEGIN_FAQ]
-Q: (accounting-relevant conversational question 1)
-A: (concise 2-3 sentence answer)
-Q: (accounting-relevant conversational question 2)
-A: (concise 2-3 sentence answer)
-Q: (accounting-relevant conversational question 3)
-A: (concise 2-3 sentence answer)
-[END_FAQ]`;
-
-  let raw = "";
   try {
-    raw = await groqGenerate(
-      "You are a master content writer for the Indian accounting education market. Your content feels like a warm, knowledgeable mentor speaking directly to the reader's deepest insecurities and ambitions about their accounting career. Every paragraph drives emotional transformation. Use accounting-specific examples (GST, Tally, balance sheets, audit, taxation).",
-      prompt,
-      { model: "llama-3.3-70b-versatile", temperature: 0.7, maxTokens: 4000 }
-    );
-  } catch (err) {
-    console.error("Blog Generator Agent — Groq generation failed:", err.message);
-    throw new Error("Content generation failed: " + err.message);
-  }
+    // PRODUCTION FIX: Upgraded model to qwen3.6-plus per architecture specifications
+    const rawOutput = await groqGenerate(systemPrompt, userPrompt, {
+      model: "qwen3.6-plus",
+      temperature: 0.6,
+      maxTokens: 4000 
+    });
 
-  let content = extractBlock(raw, "[BEGIN_CONTENT]", "[END_CONTENT]");
+    return parseGeneratedCluster(rawOutput);
+  } catch (error) {
+    console.error("Content Generation Agent Failure:", error.message);
+    throw error;
+  }
+}
+
+function parseGeneratedCluster(rawText) {
+  const titleMatch = rawText.match(/TITLE:\s*(.+)/i);
+  const excerptMatch = rawText.match(/EXCERPT:\s*(.+)/i);
+
+  let blogContent = "";
   
-  // Robust fallback: If [BEGIN_CONTENT] is missing, try to find the longest block of text
-  if (!content && raw.length > 500) {
-    const parts = raw.split(/\[BEGIN_CONTENT\]|\[END_CONTENT\]/);
-    content = parts.length >= 2 ? parts[1].trim() : raw.trim();
+  // PRODUCTION FIX: Optimized Lookahead Regex pattern to accept variable boundary layouts,
+  // varying lengths of equal signs (=), block text variations, or direct drops into the day tags.
+  const contentSectionMatch = rawText.match(/CONTENT:\s*([\s\S]*?)(?=^={3,}\s*BLOCK\s*2|^==*|\[WHATSAPP_DAY_1\]|========== BLOCK 2:)/im);
+  
+  if (contentSectionMatch && contentSectionMatch[1].trim().length > 50) {
+    blogContent = contentSectionMatch[1].trim();
+  } else {
+    // Fallback extraction strategies if formatting patterns shift
+    const fallbackStart = rawText.search(/CONTENT:/i);
+    const whatsappStart = rawText.search(/\[WHATSAPP_DAY_1\]/i);
+    
+    if (fallbackStart !== -1 && whatsappStart !== -1 && whatsappStart > fallbackStart) {
+      blogContent = rawText.substring(fallbackStart + 8, whatsappStart).replace(/={3,}\s*BLOCK\s*2.*/gi, "").trim();
+    } else if (fallbackStart !== -1) {
+      blogContent = rawText.substring(fallbackStart + 8).trim();
+    }
   }
 
-  if (!content || content.length < 100) throw new Error("Blog generator failed to produce meaningful content.");
-
-  const metaDescription = extractBlock(raw, "[BEGIN_META]", "[END_META]");
-  const metaDesc = metaDescription ? extractField(metaDescription, "META_DESCRIPTION") : "";
-
-  const summary = extractBlock(raw, "[BEGIN_SUMMARY]", "[END_SUMMARY]") || "An insightful guide for accounting professionals.";
-
-  const rawTags = extractBlock(raw, "[BEGIN_TAGS]", "[END_TAGS]");
-  const tags = rawTags
-    ? rawTags.split(",").map(t => t.replace(/\*\*|__|\\*|_/g, "").trim()).filter(t => t.length > 0 && t.length < 40).slice(0, 6)
-    : (blueprint.targetKeywords || []).slice(0, 6);
-
-  const rawFaq = extractBlock(raw, "[BEGIN_FAQ]", "[END_FAQ]");
-  const faq = parseFAQ(rawFaq);
-
-  const h2s = [];
-  const h2Regex = /^##\s+(.+)$/gm;
-  let match;
-  while ((match = h2Regex.exec(content)) !== null) {
-    h2s.push(match[1].trim());
+  // Debugging utility to inspect raw pipeline output lengths when parsing drops below threshold
+  if (blogContent.split(/\s+/).length < 20) {
+    console.log("⚠️ Parser Alert: Extracted content length is unusually short. Falling back to structured search wrapper.");
+    blogContent = rawText.trim();
   }
 
-  const ctaMatch = content.match(/(?:^|\n)(?:##\s*(?:Call to Action|CTA|Take Action|Next Steps|What's Next|Ready to|Start Your|Your Next).*?\n)([\s\S]*?)$/i);
-  const cta = ctaMatch ? ctaMatch[1].trim() : blueprint.ctaStrategy || "";
+  // Parsing 7-Day WhatsApp Matrix
+  const whatsappCalendar = [];
+  for (let i = 1; i <= 7; i++) {
+    const startTag = `[WHATSAPP_DAY_${i}]`;
+    const endTag = `[END_WHATSAPP_DAY_${i}]`;
+    const s = rawText.indexOf(startTag);
+    const e = rawText.indexOf(endTag);
+
+    if (s !== -1 && e !== -1) {
+      const chunk = rawText.substring(s + startTag.length, e).trim();
+      whatsappCalendar.push({
+        day: i,
+        theme: extractSubField(chunk, "THEME"),
+        hook: extractSubField(chunk, "HOOK"),
+        bodyText: extractWhatsAppBody(chunk),
+        callToAction: extractSubField(chunk, "CTA")
+      });
+    }
+  }
+
+  // Parsing 7-Day Email Campaigns
+  const emailCalendar = [];
+  for (let i = 1; i <= 7; i++) {
+    const startTag = `[EMAIL_DAY_${i}]`;
+    const endTag = `[END_EMAIL_DAY_${i}]`;
+    const s = rawText.indexOf(startTag);
+    const e = rawText.indexOf(endTag);
+
+    if (s !== -1 && e !== -1) {
+      const chunk = rawText.substring(s + startTag.length, e).trim();
+      emailCalendar.push({
+        day: i,
+        subjectLine: extractSubField(chunk, "SUBJECT"),
+        preheaderText: extractSubField(chunk, "PREHEADER"),
+        bodyHtml: extractEmailBody(chunk),
+        callToAction: extractSubField(chunk, "CTA")
+      });
+    }
+  }
 
   return {
-    title: blueprint.blogTitle,
-    metaDescription: metaDesc,
-    h1: blueprint.blogTitle,
-    h2s,
-    content,
-    summary,
-    category: blueprint.category || "ACCOUNTING",
-    tags,
-    faq,
-    cta,
-    wordCount: content.split(/\s+/).length,
+    title: titleMatch ? titleMatch[1].trim() : "Untitled Strategy Guide",
+    excerpt: excerptMatch ? excerptMatch[1].trim() : "",
+    content: blogContent,
+    whatsappCalendar,
+    emailCalendar
   };
 }
 
-function parseFAQ(rawFaq) {
-  if (!rawFaq) return [];
-  const faq = [];
-  const lines = rawFaq.split("\n").filter(l => l.trim());
-  let currentQ = null;
-
-  for (const line of lines) {
-    const qMatch = line.match(/^Q:\s*(.+)/i);
-    const aMatch = line.match(/^A:\s*(.+)/i);
-    if (qMatch) {
-      currentQ = qMatch[1].trim();
-    } else if (aMatch && currentQ) {
-      faq.push({ question: currentQ, answer: aMatch[1].trim() });
-      currentQ = null;
-    }
-  }
-  return faq;
-}
-
-function extractBlock(text, start, end) {
-  const s = text.indexOf(start);
-  const e = text.indexOf(end, s + start.length);
-  if (s === -1 || e === -1) return null;
-  return text.substring(s + start.length, e).trim();
-}
-
-function extractField(block, key) {
-  const match = block.match(new RegExp(`${key}:\\s*(.+)`, "i"));
+function extractSubField(chunk, key) {
+  const match = chunk.match(new RegExp(`${key}:\\s*(.+)`, "i"));
   return match ? match[1].trim() : "";
+}
+
+function extractWhatsAppBody(chunk) {
+  const bodyStart = chunk.search(/BODY:/i);
+  const ctaStart = chunk.search(/CTA:/i);
+  if (bodyStart !== -1 && ctaStart !== -1) {
+    return chunk.substring(bodyStart + 5, ctaStart).trim();
+  }
+  return chunk;
+}
+
+function extractEmailBody(chunk) {
+  const bodyStart = chunk.search(/BODY:/i);
+  const ctaStart = chunk.search(/CTA:/i);
+  if (bodyStart !== -1) {
+    const endIdx = ctaStart !== -1 ? ctaStart : chunk.length;
+    return chunk.substring(bodyStart + 5, endIdx).trim();
+  }
+  return chunk;
 }
 
 module.exports = blogGeneratorAgent;

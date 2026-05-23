@@ -7,7 +7,7 @@
 ## 🚀 Live Ecosystem
 - **Frontend (Production):** [https://hello0123.netlify.app/](https://hello0123.netlify.app/)
 - **Backend (API):** [https://blog-automation-1-afvy.onrender.com](https://blog-automation-1-afvy.onrender.com)
-- **Infrastructure:** Powered by **Groq Llama 3.1**, **MongoDB Atlas**, and **Node.js**.
+- **Infrastructure:** Powered by **Qwen qwen3.6-plus**, **MongoDB Atlas**, and **Node.js**.
 
 ---
 
@@ -31,7 +31,7 @@ The system executes a rigorous, sequential workflow to ensure every piece of con
 
 ## 🕵️ The Multi-Agent "Brain"
 
-Each agent is a specialized LLM instance (Llama 3.1) with a dedicated role and custom system instruction.
+Each agent is a specialized LLM instance (Qwen qwen3.6-plus) with a dedicated role and custom system instruction.
 
 ### 1. The Sighter (Domain Detection)
 - **Role**: Business Intelligence Analyst.
@@ -116,7 +116,7 @@ blog_automation/
 ---
 
 ## 🛠️ Tech Stack
-- **AI Core**: Groq Llama 3.1 8B/70B Instant.
+- **AI Core**: Qwen qwen3.6-plus.
 - **Frontend**: React (Vite), Tailwind CSS v4, Framer Motion.
 - **Backend**: Node.js, Express, SSE.
 - **Database**: MongoDB Atlas.
@@ -135,8 +135,8 @@ blog_automation/
 2. **Backend Environment (`backend/.env`)**:
    ```env
    PORT=5000
-   MONGO_URI=your_mongodb_atlas_uri
-   GROQ_API_KEY=your_groq_api_key
+   MONGODB_URI=your_mongodb_atlas_uri
+   QWEN_API_KEY=your_qwen_api_key
    ```
 
 3. **Run Locally**:

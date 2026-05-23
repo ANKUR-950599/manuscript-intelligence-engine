@@ -3,10 +3,10 @@ import { Link } from "react-router-dom";
 import api from "../api";
 
 const AGENT_STEPS = [
-  { key: "opportunity", label: "Opportunity Analysis", icon: "📊", desc: "Dual-model audience scoring (Gemini + DeepSeek R1)" },
+  { key: "opportunity", label: "Opportunity Analysis", icon: "📊", desc: "Dual-model audience scoring (Groq + DeepSeek R1)" },
   { key: "domainDetection", label: "Domain Detection", icon: "🔎", desc: "Precise sub-domain narrative routing" },
   { key: "personaLoader", label: "Persona Loader", icon: "📋", desc: "Intelligent template selection" },
-  { key: "persona", label: "Persona Agent", icon: "👤", desc: "Semi-dynamic persona intelligence (Gemini)" },
+  { key: "persona", label: "Persona Agent", icon: "👤", desc: "Semi-dynamic persona intelligence (Groq)" },
   { key: "research", label: "Research Agent", icon: "🔍", desc: "8-methodology dual-model research" },
   { key: "competitor", label: "Competitor Agent", icon: "⚔️", desc: "7-framework analysis (DeepSeek R1)" },
   { key: "memory", label: "Memory Agent", icon: "🧠", desc: "Self-learning memory query" },
@@ -82,42 +82,40 @@ export default function Dashboard() {
   }
 
   async function handleTrigger() {
-    setTriggering(true); setPipelineRunning(true);
-    setAgentStatus({}); setAgentData({}); setPipelineResult(null); setExpandedAgent(null);
+    setTriggering(true);
+    setPipelineRunning(true);
+    setAgentStatus({});
+    setAgentData({});
+    setPipelineResult(null);
+    setExpandedAgent(null);
+
     try {
       const controller = new AbortController();
       abortRef.current = controller;
-      const response = await fetch(`${getApiBase()}/api/dashboard/stream`, {
-        method: "GET", signal: controller.signal
+
+      const response = await fetch(`${getApiBase()}/api/dashboard/trigger`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        signal: controller.signal,
       });
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() || "";
-        for (const line of lines) {
-          if (!line.startsWith("data: ")) continue;
-          const raw = line.slice(6).trim();
-          if (raw === "[DONE]") continue;
-          try {
-            const msg = JSON.parse(raw);
-            const { step, status, data } = msg;
-            if (step === "complete" && status === "done") {
-              setPipelineResult(data); setPipelineRunning(false); setTriggering(false);
-              fetchAll(); continue;
-            }
-            if (step === "error") { setPipelineRunning(false); setTriggering(false); continue; }
-            setAgentStatus(prev => ({ ...prev, [step]: status }));
-            if (status === "done") setAgentData(prev => ({ ...prev, [step]: data }));
-          } catch (_) {}
-        }
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(data?.error || "Failed to trigger pipeline.");
       }
+
+      setPipelineResult(data);
+      await fetchAll();
     } catch (err) {
-      if (err.name !== "AbortError") { setPipelineRunning(false); setTriggering(false); }
+      if (err.name !== "AbortError") {
+        console.error("Trigger failed:", err);
+      }
+    } finally {
+      setPipelineRunning(false);
+      setTriggering(false);
     }
   }
 
