@@ -113,6 +113,28 @@ blog_automation/
     │   └── App.jsx           # State Management & Routing
 ```
 
+[Cron Scheduler / Trigger] ──> [Queue Monitor Check]
+│
+┌──────────────────┴──────────────────┐
+▼ (Queue Saturated)                   ▼ (Queue Exhausted)
+[Process Next Topic]             [Phase 1: Heavy Multi-Agent Refill Loop]
+│                                     │
+│                       ┌─────────────┴─────────────┐
+│                       ▼                           ▼
+│             [Apify Social Harvester]   [Tavily Market Analyzer]
+│             (FB, IG, LinkedIn Data)    (Syllabus & Intent Trends)
+│                       └─────────────┬─────────────┘
+│                                     ▼
+│                           [Structural Topic Seeding]
+│                                     │
+└──────────────────┬──────────────────┘
+▼
+[11-Step Core Persona Engine]
+▼
+[Real-Time Word-by-Word SSE Stream]
+▼
+[Database Persistence & Memory Update]
+
 ---
 
 ## 🛠️ Tech Stack
@@ -137,6 +159,8 @@ blog_automation/
    PORT=5000
    MONGODB_URI=your_mongodb_atlas_uri
    QWEN_API_KEY=your_qwen_api_key
+   TAVILY_API_KEY=-----
+   APIFY_TOKEN=-----
    ```
 
 3. **Run Locally**:
