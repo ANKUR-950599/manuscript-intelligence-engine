@@ -4,6 +4,14 @@
 
 ---
 
+Phase 1: Heavy Multi-Agent Refill Loop - 
+When the engine detects zero pending items in the generation pipeline, it enters an automated fallback loop to discover real-time high-intent content vectors:
+1.  **Apify Social Harvesting Layer:** Spins up isolated sandboxed cloud actors to extract current text markers, job listings, and community questions across Facebook, Instagram, and LinkedIn channels.
+2.  **Advanced Tavily Deep Search Layer:** Executes parallel web-crawling queries to pinpoint actual placement metrics, curriculum holes, and real-world student concerns in targeted local markets.
+3.  **Structural Seeding Engine:** Merges real-world trend insights with the internal structural lexicon, auto-generating balanced topics and pushing them directly into the live MongoDB collection.
+
+---
+
 ## 🚀 Live Ecosystem
 - **Frontend (Production):** [https://hello0123.netlify.app/](https://hello0123.netlify.app/)
 - **Backend (API):** [https://blog-automation-1-afvy.onrender.com](https://blog-automation-1-afvy.onrender.com)
