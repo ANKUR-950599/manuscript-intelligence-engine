@@ -1,8 +1,7 @@
 const axios = require("axios");
 
 const QWEN_API_KEY = process.env.QWEN_API_KEY || "";
-const DEFAULT_MODEL = process.env.QWEN_MODEL || "qwen3.6-plus";
-// Updated to correct OpenAI-compatible DashScope API endpoint structure
+const DEFAULT_MODEL = process.env.QWEN_MODEL || "qwen3.7-max";
 const QWEN_BASE_URL = process.env.QWEN_BASE_URL || "https://dashscope-intl.aliyuncs.com/compatible-mode/v1";
 
 function ensureApiKey() {
@@ -47,6 +46,9 @@ async function groqGenerate(arg1, arg2, arg3) {
     const requestModel = extraOptions.model || model;
     const requestTemp = extraOptions.temperature !== undefined ? extraOptions.temperature : 0.7;
     const requestMaxTokens = extraOptions.maxTokens || extraOptions.max_tokens || 4000;
+    
+    // Explicitly activating Deep Research/Web-Search context mode for Qwen
+    const enableDeepSearch = extraOptions.enable_search !== undefined ? extraOptions.enable_search : true;
 
     const response = await axios.post(
       `${QWEN_BASE_URL}/chat/completions`,
@@ -54,7 +56,8 @@ async function groqGenerate(arg1, arg2, arg3) {
         model: requestModel,
         messages,
         temperature: requestTemp,
-        max_tokens: requestMaxTokens
+        max_tokens: requestMaxTokens,
+        enable_search: enableDeepSearch
       },
       {
         headers: buildQwenHeaders(),
@@ -69,7 +72,7 @@ async function groqGenerate(arg1, arg2, arg3) {
     return message;
   } catch (error) {
     const errorDetails = error.response ? error.response.data : error.message || error;
-    throw new Error(`Qwen generation failed: ${errorDetails}`);
+    throw new Error(`Qwen generation failed: ${JSON.stringify(errorDetails)}`);
   }
 }
 
@@ -94,10 +97,40 @@ async function groqEmbed(text) {
   }
 }
 
+/**
+ * Interface Adapters matching Multi-Agent Core Execution Framework contracts
+ */
+async function generate(arg1, arg2, arg3) {
+  return groqGenerate(arg1, arg2, arg3);
+}
+
+async function deepResearch(arg1, arg2, arg3) {
+  if (Array.isArray(arg1)) {
+    let extraOptions = typeof arg2 === "object" ? { ...arg2 } : (typeof arg3 === "object" ? { ...arg3 } : {});
+    extraOptions.enable_search = true;
+    return groqGenerate(arg1, typeof arg2 === "string" ? arg2 : undefined, extraOptions);
+  } else if (typeof arg1 === "string" && typeof arg2 === "string") {
+    let extraOptions = typeof arg3 === "object" ? { ...arg3 } : {};
+    extraOptions.enable_search = true;
+    return groqGenerate(arg1, arg2, extraOptions);
+  } else {
+    let extraOptions = typeof arg2 === "object" ? { ...arg2 } : {};
+    extraOptions.enable_search = true;
+    return groqGenerate(arg1, typeof arg2 === "string" ? arg2 : undefined, extraOptions);
+  }
+}
+
+async function embed(text) {
+  return groqEmbed(text);
+}
+
 module.exports = {
   groqGenerate,
   generateCompletion: groqGenerate,
   groqEmbed,
   getEmbedding: groqEmbed,
-  getEmbeddings: groqEmbed
+  getEmbeddings: groqEmbed,
+  generate,
+  deepResearch,
+  embed
 };

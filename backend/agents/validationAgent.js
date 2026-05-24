@@ -1,6 +1,7 @@
 /**
  * Validation Agent — STEP 2 of the Content Loop.
  * Runs structural and LLM-driven quality gating against production parameters.
+ * Upgraded to qwen3.7-max to execute sophisticated semantic critique.
  */
 const path = require("path");
 require("dotenv").config({ path: path.join(__dirname, "../.env") });
@@ -81,7 +82,11 @@ Respond exactly inside a single JSON object matching this schema:
       const rawFeedback = await groqGenerate(
         "You are a harsh editorial reviewer for accounting education content. Output valid JSON only.",
         prompt,
-        { model: "qwen3.6-plus", temperature: 0.1 }
+        { 
+          model: "qwen3.7-max", 
+          temperature: 0.1,
+          enable_search: true 
+        }
       );
 
       let feedback = {};

@@ -1,14 +1,12 @@
 /**
  * Research Agent — STEP 2 of the Heavy Run/Refill Loop.
- * Uses: Qwen qwen3.6-plus for deep empirical and vector research context harvesting.
+ * Uses: Qwen-Max for deep empirical and vector research context harvesting.
  * Upgraded with High-Volume Data Condensing Engines and Massive Context Compression Layers.
  */
 const path = require("path");
 require("dotenv").config({ path: path.join(__dirname, "../.env") });
-const { groqGenerate, groqEmbed } = require("./clients/qwenClient");
+const clients = require("./clients/clientRegistry");
 const { getLocationByCity } = require("../config/locations");
-const { tavilySearch } = require("./clients/tavilyClient");
-const { fetchSocialSignals } = require("./clients/apifyClient");
 const mongoose = require("mongoose");
 
 const ChatIntelligence = mongoose.models.ChatIntelligence || mongoose.model("ChatIntelligence", new mongoose.Schema({
@@ -45,10 +43,11 @@ async function researchAgent(personaProfile, businessContext, locationContext) {
   
   let empiricalContextString = "No matching real-world interaction logs found in local index cache.";
   
+  // Vector search attempt on historical/curated dialogue collections
   try {
     if (process.env.QWEN_API_KEY) {
       const vectorSearchSearchQuery = `${personaProfile.buyerPersona || "Accounting student"} ${targetLocation} career path anxiety, tally core learning gaps, gst billing struggles`;
-      const runtimeQueryVector = await groqEmbed(vectorSearchSearchQuery, {
+      const runtimeQueryVector = await clients.qwen.embed(vectorSearchSearchQuery, {
         model: process.env.QWEN_EMBEDDING_MODEL || "textembedding-gecko-001"
       });
       
@@ -84,6 +83,36 @@ async function researchAgent(personaProfile, businessContext, locationContext) {
     console.error("Runtime Context Vector Search processing bypassed:", vectorSearchError.message);
   }
 
+  // DIRECT SEEDED WILDCHAT PARQUET DATA INGESTION HARVESTER
+  try {
+    const rawConversations = await mongoose.connection.db.collection("conversation_intelligence")
+      .find({
+        $or: [
+          { userRawPrompt: { $regex: "accounting|tally|gst|bcom|job", $options: "i" } },
+          { prompt: { $regex: "accounting|tally|gst|bcom|job", $options: "i" } },
+          { instruction: { $regex: "accounting|tally|gst|bcom|job", $options: "i" } }
+        ]
+      })
+      .limit(12)
+      .toArray();
+
+    if (rawConversations && rawConversations.length > 0) {
+      const parsedWildChatLogs = rawConversations.map((doc, idx) => {
+        const userPrompt = doc.userRawPrompt || doc.prompt || doc.instruction || "Empty Prompt String";
+        const aiResponse = doc.assistantResponse || doc.response || doc.output || "Empty Response String";
+        return `[WildChat Seeded Context #${idx + 1}]\nUser Friction/Query: ${userPrompt}\nAI Historical Response: ${aiResponse.substring(0, 350)}...`;
+      }).join("\n\n");
+
+      if (empiricalContextString === "No matching real-world interaction logs found in local index cache.") {
+        empiricalContextString = parsedWildChatLogs;
+      } else {
+        empiricalContextString = `${empiricalContextString}\n\n=== RECOVERED HUGGINGFACE WILDCHAT SEEDED DIALOGUES ===\n${parsedWildChatLogs}`;
+      }
+    }
+  } catch (rawCollectionErr) {
+    console.error("⚠️ Fallback WildChat Parquet raw log extractor bypassed:", rawCollectionErr.message);
+  }
+
   // --- LIVE WEB INTELLIGENCE INGESTION ENGINE ---
   let liveWebContextString = "No secondary real-time web results fetched.";
   let liveSocialContextString = "No external social channel signals collected.";
@@ -93,7 +122,7 @@ async function researchAgent(personaProfile, businessContext, locationContext) {
     console.log(`🌐 Deploying Advanced Tavily Deep Search Layer for: "${deepQueryString}"`);
     
     // Upgraded maxResults from 4 to 15 for widespread network discovery
-    const webItems = await tavilySearch(deepQueryString, { searchDepth: "advanced", maxResults: 15, includeRawContent: true });
+    const webItems = await clients.tavily.tavilySearch(deepQueryString, { searchDepth: "advanced", maxResults: 15, includeRawContent: true });
     
     if (webItems && webItems.length > 0) {
       liveWebContextString = webItems.map((item, idx) => {
@@ -103,7 +132,7 @@ async function researchAgent(personaProfile, businessContext, locationContext) {
     }
 
     console.log("📡 Harvesting Scaled Social Media Signals via Upgraded Apify Integration Pipeline...");
-    const socialSignals = await fetchSocialSignals("accounting training job", targetLocation);
+    const socialSignals = await clients.apify.fetchSocialSignals("accounting training job", targetLocation);
     
     // Process heavy textual streams through the structural condenser matrix
     const condensedFB = condenseContentStream(socialSignals.facebook);
@@ -165,8 +194,8 @@ EMOTIONAL TRANSFORMATION PSYCHOLOGY: (5-6 sentences on the deep emotional transf
 
   let researchResult = "";
   try {
-    researchResult = await groqGenerate(researchSystemPrompt, researchUserPrompt, {
-      model: "qwen3.6-plus",
+    // Upgraded to Deep Research using Qwen-Max and Web Searching Native Execution
+    researchResult = await clients.qwen.deepResearch(researchSystemPrompt, researchUserPrompt, {
       temperature: 0.8,
       maxTokens: 4000
     });
@@ -195,8 +224,8 @@ BEHAVIORAL_PATTERNS: (3 platform-specific behaviors; comma-separated)
 
   let analysisResult = "";
   try {
-    analysisResult = await groqGenerate(analysisSystemPrompt, analysisUserPrompt, {
-      model: "qwen3.6-plus",
+    // Phase 2 remains on the standard high-speed generation tier as it parses Phase 1 context
+    analysisResult = await clients.qwen.generate(analysisSystemPrompt, analysisUserPrompt, {
       temperature: 0.5,
       maxTokens: 3000
     });

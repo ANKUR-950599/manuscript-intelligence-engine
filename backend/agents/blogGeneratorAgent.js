@@ -1,6 +1,7 @@
 /**
  * Content Generation Agent — STEP 5 of the autonomous pipeline.
- * Runs on Qwen qwen3.6-plus for high-fidelity long-form content.
+ * Runs on Qwen qwen3.7-max for high-fidelity long-form content.
+ * Integrates deep research web execution directly during drafting.
  */
 const { groqGenerate } = require("./clients/qwenClient");
 
@@ -51,11 +52,12 @@ CTA: (Clear contextual hyperlinked action anchor text phrase for Masters' Union)
 [END_EMAIL_DAY_X]`;
 
   try {
-    // PRODUCTION FIX: Upgraded model to qwen3.6-plus per architecture specifications
+    // PRODUCTION FIX: Upgraded model to qwen3.7-max and enabled deep contextual search
     const rawOutput = await groqGenerate(systemPrompt, userPrompt, {
-      model: "qwen3.6-plus",
+      model: "qwen3.7-max",
       temperature: 0.6,
-      maxTokens: 4000 
+      maxTokens: 4000,
+      enable_search: true
     });
 
     return parseGeneratedCluster(rawOutput);

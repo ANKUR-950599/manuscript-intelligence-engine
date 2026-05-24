@@ -4,12 +4,12 @@
  */
 const path = require("path");
 require("dotenv").config({ path: path.join(__dirname, "../.env") });
-const { groqGenerate } = require("./clients/qwenClient");
+const clients = require("./clients/clientRegistry");
 
 async function orchestratorAgent(persona, research, competitor) {
   const targetLocation = persona.targetLocation || research.targetLocation || "Kolkata";
 
-  const prompt = `You are the Chief Content Strategist for an Indian Accounting & Finance education brand targeting students in ${targetLocation}. You are the central orchestrator brain. Your task is to analyze the buyer persona profile, empirical research vectors, and competitor weaknesses to build a structured batch blueprint containing exactly 6 high-impact topics. These topics will be queued sequentially for production.
+  const prompt = `You are the Chief Content Strategist for an Indian Accounting & Finance education brand targeting students in ${targetLocation}. You are the central orchestrator brain. Your task is to analyze the buyer persona profile, empirical research vectors (specifically emphasizing raw user phrases and conversational friction found in the historical conversation_intelligence dataset logs), and competitor weaknesses to build a structured batch blueprint containing exactly 6 high-impact topics. These topics will be queued sequentially for production.
   
 TARGET PERSONA DETAILS:
 ${JSON.stringify(persona, null, 2)}
@@ -21,7 +21,7 @@ COMPETITOR INTEL & GAPS:
 ${JSON.stringify(competitor, null, 2)}
 
 OUTPUT REQUIREMENT:
-You must generate exactly 6 highly distinct content topics ranked from Rank 1 to Rank 6. Rank 1 must represent the most immediate, conversion-heavy low-hanging fruit. Each topic block must be fully fleshed out with precise editorial parameters.
+You must generate exactly 6 highly distinct content topics ranked from Rank 1 to Rank 6. Rank 1 must represent the most immediate, conversion-heavy low-hanging fruit. Each topic block must be fully fleshed out with precise editorial parameters. Ensure the tone and structural angles reflect the exact raw user struggles discovered within the historical chat intelligence context block.
 
 You must respond in this EXACT structural layout block without deviation:
 [START_TOPICS_LIST]
@@ -42,10 +42,10 @@ TOPIC_RANK: 2
 [END_TOPICS_LIST]`;
 
   try {
-    const rawBlueprint = await groqGenerate(
+    const rawBlueprint = await clients.qwen.generate(
       "You are an elite multi-agent system director and master copywriter. Output clear strategies matching strict layout block constraints.",
       prompt,
-      { model: "qwen3.6-plus", temperature: 0.4 }
+      { temperature: 0.4 }
     );
 
     return parseBatchTopics(rawBlueprint, targetLocation);

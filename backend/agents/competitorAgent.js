@@ -1,13 +1,12 @@
 /**
  * Competitor Agent — STEP 3 of the Heavy Run/Refill Loop.
- * Uses: Qwen qwen3.6-plus for competitor gap mapping and intelligence isolation.
+ * Uses: Qwen-Max (Deep Research Mode) for competitor gap mapping and intelligence isolation.
  * Upgraded with Tavily Search Capabilities and Ingesting High-Volume Social Sentiments for Deep Market Analysis.
  */
 const path = require("path");
 require("dotenv").config({ path: path.join(__dirname, "../.env") });
-const { groqGenerate } = require("./clients/qwenClient");
+const clients = require("./clients/clientRegistry");
 const { PRIMARY_COMPETITORS, getCompetitorContext } = require("../config/competitors");
-const { tavilySearch } = require("./clients/tavilyClient");
 
 async function competitorAgent(competitorWebsites, personaProfile, researchData) {
   const allCompetitors = typeof getCompetitorContext === "function" ? getCompetitorContext() : "Generic Local Accounting Institutes, Video Tutorial Channels";
@@ -20,7 +19,7 @@ async function competitorAgent(competitorWebsites, personaProfile, researchData)
     console.log(`🌐 Competitor Agent: Querying expanded market terrain via Tavily: "${competitiveSearchString}"`);
     
     // Scaled up maxResults from 3 to 12 for maximum geographic competitor tracking exposure
-    const liveCompetitorTracks = await tavilySearch(competitiveSearchString, { searchDepth: "advanced", maxResults: 12, includeRawContent: true });
+    const liveCompetitorTracks = await clients.tavily.tavilySearch(competitiveSearchString, { searchDepth: "advanced", maxResults: 12, includeRawContent: true });
     
     if (liveCompetitorTracks && liveCompetitorTracks.length > 0) {
       realTimeCompetitorIntel = liveCompetitorTracks.map((c, i) => {
@@ -74,8 +73,8 @@ CONTENT_OPPORTUNITIES: (6 content topics competitors ignore completely, comma-se
 
   let result = "";
   try {
-    result = await groqGenerate(systemPrompt, userPrompt, {
-      model: "qwen3.6-plus",
+    // Upgraded explicitly to Deep Research (qwen-max + native web execution)
+    result = await clients.qwen.deepResearch(systemPrompt, userPrompt, {
       temperature: 0.7,
       maxTokens: 4000 // Ensuring structural analysis is not truncated mid-payload
     });

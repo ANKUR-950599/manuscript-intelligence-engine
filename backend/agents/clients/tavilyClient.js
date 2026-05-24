@@ -25,7 +25,7 @@ async function tavilySearch(query, options = {}) {
         search_depth: options.searchDepth || "advanced",
         include_answer: options.includeAnswer !== undefined ? options.includeAnswer : true,
         include_raw_content: options.includeRawContent !== undefined ? options.includeRawContent : true,
-        max_results: options.maxResults || 15
+        max_results: options.maxResults || 20 // Bumped to 20 for massive data hauls
       })
     });
 
